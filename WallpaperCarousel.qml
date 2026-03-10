@@ -62,6 +62,65 @@ PluginComponent {
 
     readonly property string wallpaperFolderUrl: "file://" + wallpaperFolder
 
+    // -------------------------------------------------------------------------
+    // waits for new files to stabilise before displaying them
+    // so that partially-downloaded images are not rendered as corrupted.
+    // -------------------------------------------------------------------------
+    property bool _initialSyncDone: false
+
+    ListModel { id: stableModel }
+
+    Timer {
+        id: modelSyncTimer
+        interval: 1500
+        onTriggered: root._syncStableModel()
+    }
+
+    FolderListModel {
+        id: folderModel
+        folder: root.wallpaperFolderUrl
+        nameFilters: ["*.jpg", "*.jpeg", "*.png", "*.webp", "*.gif",
+                      "*.bmp", "*.jxl", "*.avif", "*.heif", "*.exr"]
+        showDirs: false
+        sortField: FolderListModel.Name
+
+        onStatusChanged: {
+            if (status === FolderListModel.Ready && !root._initialSyncDone) {
+                root._syncStableModel();
+                root._initialSyncDone = true;
+            }
+        }
+        onCountChanged: {
+            if (root._initialSyncDone)
+                modelSyncTimer.restart();
+        }
+    }
+
+    function _syncStableModel() {
+        const savedIndex = view.currentIndex;
+        const savedFile = (savedIndex >= 0 && savedIndex < stableModel.count)
+            ? stableModel.get(savedIndex).fileName : "";
+
+        stableModel.clear();
+        for (let i = 0; i < folderModel.count; i++) {
+            stableModel.append({
+                fileName: folderModel.get(i, "fileName"),
+                fileUrl: folderModel.get(i, "fileUrl").toString()
+            });
+        }
+
+        if (savedFile) {
+            for (let i = 0; i < stableModel.count; i++) {
+                if (stableModel.get(i).fileName === savedFile) {
+                    view.currentIndex = i;
+                    break;
+                }
+            }
+        }
+
+        carousel.tryFocus();
+    }
+
     function toggle() {
         if (overlay.shown) {
             close();
@@ -189,9 +248,9 @@ PluginComponent {
                            ? SessionData.getMonitorWallpaper(overlay.screen.name)
                            : SessionData.wallpaperPath;
                 const currentFile = (wp || "").split('/').pop();
-                if (currentFile && folderModel.count > 0) {
-                    for (let i = 0; i < folderModel.count; i++) {
-                        if (folderModel.get(i, "fileName") === currentFile) {
+                if (currentFile && stableModel.count > 0) {
+                    for (let i = 0; i < stableModel.count; i++) {
+                        if (stableModel.get(i).fileName === currentFile) {
                             targetIndex = i;
                             break;
                         }
@@ -202,7 +261,7 @@ PluginComponent {
                     view.currentIndex = targetIndex;
                     view.positionViewAtIndex(targetIndex, ListView.Center);
                     initialFocusSet = true;
-                } else if (folderModel.status === FolderListModel.Ready && view.count > 0) {
+                } else if (view.count > 0) {
                     const safeIndex = Math.min(targetIndex, view.count - 1);
                     view.currentIndex = safeIndex;
                     view.positionViewAtIndex(safeIndex, ListView.Center);
@@ -279,16 +338,7 @@ PluginComponent {
 
                 onCountChanged: carousel.tryFocus()
 
-                model: FolderListModel {
-                    id: folderModel
-                    folder: root.wallpaperFolderUrl
-                    nameFilters: ["*.jpg", "*.jpeg", "*.png", "*.webp", "*.gif",
-                                  "*.bmp", "*.jxl", "*.avif", "*.heif", "*.exr"]
-                    showDirs: false
-                    sortField: FolderListModel.Name
-
-                    onStatusChanged: carousel.tryFocus()
-                }
+                model: stableModel
 
                 delegate: Item {
                     id: delegateRoot
@@ -441,15 +491,6 @@ PluginComponent {
     // PRE-CACHE — force Qt to decode wallpaper thumbnails at boot by rendering
     // them inside a real 1×1 PanelWindow on the Background layer.
     // -------------------------------------------------------------------------
-    FolderListModel {
-        id: precacheModel
-        folder: root.wallpaperFolderUrl
-        nameFilters: ["*.jpg", "*.jpeg", "*.png", "*.webp", "*.gif",
-                      "*.bmp", "*.jxl", "*.avif", "*.heif", "*.exr"]
-        showDirs: false
-        sortField: FolderListModel.Name
-    }
-
     PanelWindow {
         id: cacheWindow
         visible: true
@@ -468,7 +509,7 @@ PluginComponent {
             clip: true
 
             Repeater {
-                model: precacheModel
+                model: stableModel
                 Image {
                     width: carousel.itemWidth
                     height: carousel.itemHeight
