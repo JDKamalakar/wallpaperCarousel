@@ -43,7 +43,7 @@ Control the carousel via DMS IPC:
 
 **Keyboard shortcuts** (when open): `←` / `→` to navigate, `Enter` to apply, `Escape` to close.
 
-## Compositor Keybindings
+## Example Compositor Keybindings
 
 ### Niri
 
