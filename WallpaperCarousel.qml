@@ -84,7 +84,7 @@ PluginComponent {
     }
 
     function toggle() {
-        if (overlay.shown) {
+        if (overlay.visible) {
             close();
         } else {
             open();
@@ -96,18 +96,18 @@ PluginComponent {
         const focusedScreen = CompositorService.getFocusedScreen();
         if (focusedScreen)
             overlay.screen = focusedScreen;
-        overlay.shown = true;
+        overlay.visible = true;
         carousel.tryFocus();
         view.forceActiveFocus();
         Qt.callLater(() => view.forceActiveFocus());
     }
 
     function close() {
-        overlay.shown = false;
+        overlay.visible = false;
     }
 
     function cycle(direction: int): string {
-        if (!overlay.shown) {
+        if (!overlay.visible) {
             open();
             return "opened:" + view.currentIndex;
         }
@@ -135,17 +135,17 @@ PluginComponent {
 
         function toggle(): string {
             root.toggle();
-            return overlay.shown ? "opened" : "closed";
+            return overlay.visible ? "opened" : "closed";
         }
 
         function open(): string {
-            if (!overlay.shown)
+            if (!overlay.visible)
                 root.open();
             return "opened";
         }
 
         function close(): string {
-            if (overlay.shown)
+            if (overlay.visible)
                 root.close();
             return "closed";
         }
@@ -159,15 +159,13 @@ PluginComponent {
     // -------------------------------------------------------------------------
     PanelWindow {
         id: overlay
-        visible: true
+        visible: false
         color: "transparent"
 
-        property bool shown: false
-
         WlrLayershell.namespace: "dms:plugins:wallpaperCarousel"
-        WlrLayershell.layer: shown ? WlrLayershell.Overlay : WlrLayershell.Background
+        WlrLayershell.layer: WlrLayershell.Overlay
         WlrLayershell.exclusiveZone: -1
-        WlrLayershell.keyboardFocus: shown ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+        WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive
 
         anchors {
             top: true
@@ -179,14 +177,14 @@ PluginComponent {
         Rectangle {
             anchors.fill: parent
             color: "#CC000000"
-            opacity: overlay.shown ? 1 : 0
+            opacity: overlay.visible ? 1 : 0
             Behavior on opacity { NumberAnimation { duration: 150 } }
         }
 
         // Click background to close
         MouseArea {
             anchors.fill: parent
-            enabled: overlay.shown && carousel.confirmingIndex < 0
+            enabled: overlay.visible && carousel.confirmingIndex < 0
             onClicked: root.close()
         }
 
@@ -196,7 +194,7 @@ PluginComponent {
         Item {
             id: carousel
             anchors.fill: parent
-            opacity: overlay.shown ? 1 : 0
+            opacity: overlay.visible ? 1 : 0
             Behavior on opacity { NumberAnimation { duration: 150 } }
 
             property bool initialFocusSet: false
@@ -274,7 +272,7 @@ PluginComponent {
 
                 highlightMoveDuration: carousel.initialFocusSet ? 150 : 0
 
-                focus: overlay.shown
+                focus: overlay.visible
                 activeFocusOnTab: true
 
                 Keys.onPressed: event => {
@@ -411,7 +409,7 @@ PluginComponent {
         Column {
             anchors.centerIn: parent
             spacing: 12
-            visible: overlay.shown && folderModel.status === FolderListModel.Ready && folderModel.count === 0
+            visible: overlay.visible && folderModel.status === FolderListModel.Ready && folderModel.count === 0
 
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
