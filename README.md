@@ -2,7 +2,7 @@
 
 Based on the original wallpaper picker by [ilyamiro](https://github.com/ilyamiro/nixos-configuration).
 
-A [DankMaterialShell](https://github.com/nicehash/DankMaterialShell) plugin that lets you browse and pick wallpapers from a fullscreen skewed carousel overlay.
+A [DankMaterialShell](https://danklinux.com/) plugin that lets you browse and pick wallpapers from a fullscreen skewed carousel overlay.
 
 ![screenshot](screenshot.png)
 
