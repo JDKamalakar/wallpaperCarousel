@@ -7,6 +7,7 @@ import qs.Common
 import qs.Services
 import qs.Widgets
 import qs.Modules.Plugins
+import Qt5Compat.GraphicalEffects
 
 PluginComponent {
     id: root
@@ -268,6 +269,9 @@ PluginComponent {
                         v.positionViewAtIndex(safeIndex, ListView.Center);
                     initialFocusSet = true;
                 }
+
+                carousel.heldIndex = -1;
+                holdTimer.start();
             }
 
             readonly property int itemWidth: parseInt(pluginData && pluginData.itemWidth) || 300
@@ -277,6 +281,22 @@ PluginComponent {
             readonly property int overlayOpacity: (pluginData && pluginData.overlayOpacity) || 80
             readonly property real skewFactor: -0.35
             readonly property int _baseWallpaperCount: folderModel.count
+
+            readonly property bool enableRounding: (pluginData && pluginData.enableRounding === "true")
+            readonly property int cornerRadius: parseInt(pluginData && pluginData.cornerRadius) || 15
+            readonly property bool expandSelected: (pluginData && pluginData.expandSelected === "true")
+            readonly property real expandMultiplier: (parseInt(pluginData && pluginData.expandMultiplier) || 150) / 100.0
+            readonly property real holdExpandRatio: (parseFloat(pluginData && pluginData.holdExpandRatio) || 80.0) / 100.0
+            readonly property int holdDelay: parseInt(pluginData && pluginData.holdDelay) || 1500
+            readonly property int activeMargin: parseInt(pluginData && pluginData.activeMargin) || 80
+
+            property int heldIndex: -1
+
+            Timer {
+                id: holdTimer
+                interval: carousel.holdDelay
+                onTriggered: carousel.heldIndex = root._currentView.currentIndex
+            }
 
             property int confirmingIndex: -1
 
@@ -385,12 +405,51 @@ PluginComponent {
                         onClicked: delegateRoot.pickWallpaper()
                     }
 
-                    Item {
-                        anchors.centerIn: parent
-                        width: parent.width
-                        height: parent.height
+                    readonly property real extraSpace: (carousel.itemWidth * carousel.expandMultiplier - carousel.itemWidth) + carousel.activeMargin
+                    readonly property real heldExtraSpace: (carousel.width * carousel.holdExpandRatio - carousel.itemWidth) + carousel.activeMargin
 
+                    readonly property real visualXOffset: {
+                        if (isHeld) return 0;
+                        if (!carousel.expandSelected && carousel.heldIndex < 0) return 0;
+                        if (distFromCenter === 0) return 0;
+
+                        const space = (carousel.heldIndex >= 0) ? heldExtraSpace : extraSpace;
+
+                        // For confirming, we might not want to shift, but it's okay if they shift
+                        let signedDist = 0;
+                        if (root._isInfinite) {
+                            let d = index - pathView.currentIndex;
+                            const h = stableModel.count / 2;
+                            if (d > h) d -= stableModel.count;
+                            else if (d < -h) d += stableModel.count;
+                            signedDist = d;
+                        } else {
+                            signedDist = index - listView.currentIndex;
+                        }
+                        return signedDist > 0 ? (space / 2) : -(space / 2);
+                    }
+
+                    Item {
+                        anchors.verticalCenter: parent.verticalCenter
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        anchors.horizontalCenterOffset: visualXOffset
+                        
                         readonly property bool isConfirmed: carousel.confirmingIndex === delegateRoot.index
+                        readonly property bool isHeld: carousel.heldIndex === delegateRoot.index
+                        
+                        width: isHeld ? (carousel.width * carousel.holdExpandRatio) : ((carousel.expandSelected && isCurrent) ? (carousel.itemWidth * carousel.expandMultiplier) : carousel.itemWidth)
+                        height: isHeld ? (carousel.height * carousel.holdExpandRatio) : parent.height
+
+                        Behavior on anchors.horizontalCenterOffset {
+                            NumberAnimation { duration: 400; easing.type: Easing.InOutCubic }
+                        }
+                        Behavior on width {
+                            NumberAnimation { duration: 400; easing.type: Easing.InOutCubic }
+                        }
+                        Behavior on height {
+                            NumberAnimation { duration: 400; easing.type: Easing.InOutCubic }
+                        }
+
                         readonly property bool isOtherConfirming: carousel.confirmingIndex >= 0 && !isConfirmed
                         readonly property bool isHovered: delegateMouseArea.containsMouse && carousel.confirmingIndex < 0
 
@@ -399,7 +458,7 @@ PluginComponent {
 
                         scale: isConfirmed ? 1.6 : isOtherConfirming ? (baseScale + scaleRange * delegateRoot.falloff) * 0.8 : isHovered ? baseScale + (scaleRange + 0.20) * delegateRoot.falloff : baseScale + scaleRange * delegateRoot.falloff
                         opacity: (isConfirmed ? 0.0 : isOtherConfirming ? 0.0 : isHovered ? 1.0 : 0.1 + 0.9 * delegateRoot.falloff) * delegateRoot._dupeFade
-                        layer.enabled: opacity < 1
+                        layer.enabled: opacity < 1 && opacity > 0 && !isConfirmed
 
                         Behavior on scale {
                             NumberAnimation {
@@ -418,43 +477,60 @@ PluginComponent {
                             matrix: Qt.matrix4x4(1, s, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)
                         }
 
-                        // Outer skewed border image
-                        Image {
-                            anchors.fill: parent
-                            source: delegateRoot.fileUrl
-                            sourceSize: Qt.size(carousel.itemWidth, carousel.itemHeight)
-                            fillMode: Image.Stretch
-                            asynchronous: true
-                            visible: innerImage.status === Image.Ready
-                        }
-
                         Item {
                             anchors.fill: parent
-                            anchors.margins: carousel.borderWidth
-                            visible: innerImage.status === Image.Ready
 
                             Rectangle {
-                                anchors.fill: parent
-                                color: "black"
-                            }
-                            clip: true
-
-                            Image {
-                                id: innerImage
-                                anchors.centerIn: parent
-                                anchors.horizontalCenterOffset: -50
-
-                                width: parent.width + (parent.height * Math.abs(carousel.skewFactor)) + 50
+                                id: cornerMask
+                                width: parent.width
                                 height: parent.height
+                                radius: carousel.cornerRadius
+                                visible: false
+                            }
 
-                                fillMode: Image.PreserveAspectCrop
+                            layer.enabled: carousel.enableRounding
+                            layer.effect: OpacityMask {
+                                maskSource: cornerMask
+                            }
+
+                            // Outer skewed border image
+                            Image {
+                                anchors.fill: parent
                                 source: delegateRoot.fileUrl
                                 sourceSize: Qt.size(carousel.itemWidth, carousel.itemHeight)
+                                fillMode: Image.Stretch
                                 asynchronous: true
+                                visible: innerImage.status === Image.Ready
+                            }
 
-                                transform: Matrix4x4 {
-                                    property real s: -carousel.skewFactor
-                                    matrix: Qt.matrix4x4(1, s, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)
+                            Item {
+                                anchors.fill: parent
+                                anchors.margins: carousel.borderWidth
+                                visible: innerImage.status === Image.Ready
+
+                                Rectangle {
+                                    anchors.fill: parent
+                                    color: "black"
+                                }
+                                clip: true
+
+                                Image {
+                                    id: innerImage
+                                    anchors.centerIn: parent
+                                    anchors.horizontalCenterOffset: -50
+
+                                    width: parent.width + (parent.height * Math.abs(carousel.skewFactor)) + 50
+                                    height: parent.height
+
+                                    fillMode: Image.PreserveAspectCrop
+                                    source: delegateRoot.fileUrl
+                                    sourceSize: Qt.size(carousel.itemWidth, carousel.itemHeight)
+                                    asynchronous: true
+
+                                    transform: Matrix4x4 {
+                                        property real s: -carousel.skewFactor
+                                        matrix: Qt.matrix4x4(1, s, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)
+                                    }
                                 }
                             }
                         }
@@ -507,6 +583,10 @@ PluginComponent {
                 }
 
                 onCountChanged: carousel.tryFocus()
+                onCurrentIndexChanged: {
+                    carousel.heldIndex = -1;
+                    holdTimer.restart();
+                }
 
                 // Horizontal line through the vertical centre of the view.
                 // Length = pathItemCount * itemWidth so items are always
@@ -582,6 +662,10 @@ PluginComponent {
                 }
 
                 onCountChanged: carousel.tryFocus()
+                onCurrentIndexChanged: {
+                    carousel.heldIndex = -1;
+                    holdTimer.restart();
+                }
             }
         }
 
