@@ -7,6 +7,63 @@ PluginSettings {
     id: root
     pluginId: "wallpaperCarousel"
 
+    // -------------------------------------------------------------------------
+    // Reusable Component to reduce code bloat
+    // -------------------------------------------------------------------------
+    component SettingSlider: Column {
+        id: sliderRoot
+        property string label: ""
+        property string desc: ""
+        property string settingKey: ""
+        property int min: 0
+        property int max: 100
+        property int defaultVal: 0
+        property string unit: ""
+
+        width: parent.width; spacing: Theme.spacingXS
+        property var val: root.loadValue(settingKey, defaultVal)
+
+        Row {
+            width: parent.width; spacing: Theme.spacingS
+            StyledText { 
+                text: label
+                font.weight: Font.Medium
+                color: Theme.surfaceText
+                width: parent.width - 24 - Theme.spacingS 
+            }
+            DankIcon {
+                name: "restart_alt"; size: 20
+                opacity: String(sliderRoot.val) !== String(defaultVal) ? 0.8 : 0.0
+                visible: opacity > 0
+                Behavior on opacity { NumberAnimation { duration: 200 } }
+                MouseArea { 
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: root.saveValue(settingKey, defaultVal) 
+                }
+            }
+        }
+        StyledText { 
+            text: desc
+            font.pixelSize: Theme.fontSizeSmall
+            color: Theme.surfaceVariantText
+            width: parent.width
+            wrapMode: Text.WordWrap
+            opacity: 0.8 
+        }
+        DankSlider { 
+            width: parent.width
+            minimum: sliderRoot.min
+            maximum: sliderRoot.max
+            value: Number(sliderRoot.val) || sliderRoot.defaultVal
+            unit: sliderRoot.unit
+            onSliderValueChanged: v => root.saveValue(sliderRoot.settingKey, v) 
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // General Settings
+    // -------------------------------------------------------------------------
     StringSetting {
         settingKey: "wallpaperDirectory"
         label: "Wallpaper Directory"
@@ -27,155 +84,49 @@ PluginSettings {
         ]
     }
 
-    // -------------------------------------------------------------
-    // Item Width
-    // -------------------------------------------------------------
-    Column {
-        id: colWidth
-        width: parent.width; spacing: Theme.spacingXS
-        property int defaultValue: 300
-        property var val: root.loadValue("itemWidth", defaultValue)
-        Row {
-            width: parent.width; spacing: Theme.spacingS
-            StyledText { text: "Item Width"; font.weight: Font.Medium; color: Theme.surfaceText; width: parent.width - 24 - Theme.spacingS }
-            DankIcon {
-                name: "restart_alt"; size: 20
-                opacity: String(colWidth.val) !== String(colWidth.defaultValue) ? 0.8 : 0.0
-                visible: opacity > 0
-                Behavior on opacity { NumberAnimation { duration: 200 } }
-                MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.saveValue("itemWidth", colWidth.defaultValue) }
-            }
-        }
-        StyledText { text: "Width of each wallpaper thumbnail in pixels."; font.pixelSize: Theme.fontSizeSmall; color: Theme.surfaceVariantText; width: parent.width; wrapMode: Text.WordWrap; opacity: 0.8 }
-        DankSlider { width: parent.width; minimum: 100; maximum: 1000; value: Number(colWidth.val) || colWidth.defaultValue; unit: "px"; onSliderValueChanged: v => root.saveValue("itemWidth", v) }
+    SettingSlider {
+        label: "Background Dimming"
+        desc: "Opacity of the dark overlay behind the carousel."
+        settingKey: "overlayOpacity"
+        defaultVal: 80
+        unit: "%"
     }
 
-    // -------------------------------------------------------------
-    // Item Height
-    // -------------------------------------------------------------
-    Column {
-        id: colHeight
-        width: parent.width; spacing: Theme.spacingXS
-        property int defaultValue: 420
-        property var val: root.loadValue("itemHeight", defaultValue)
-        Row {
-            width: parent.width; spacing: Theme.spacingS
-            StyledText { text: "Item Height"; font.weight: Font.Medium; color: Theme.surfaceText; width: parent.width - 24 - Theme.spacingS }
-            DankIcon {
-                name: "restart_alt"; size: 20
-                opacity: String(colHeight.val) !== String(colHeight.defaultValue) ? 0.8 : 0.0
-                visible: opacity > 0
-                Behavior on opacity { NumberAnimation { duration: 200 } }
-                MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.saveValue("itemHeight", colHeight.defaultValue) }
-            }
-        }
-        StyledText { text: "Height of each wallpaper thumbnail in pixels."; font.pixelSize: Theme.fontSizeSmall; color: Theme.surfaceVariantText; width: parent.width; wrapMode: Text.WordWrap; opacity: 0.8 }
-        DankSlider { width: parent.width; minimum: 100; maximum: 1440; value: Number(colHeight.val) || colHeight.defaultValue; unit: "px"; onSliderValueChanged: v => root.saveValue("itemHeight", v) }
+    SettingSlider {
+        label: "Corner Radius"
+        desc: "Adjust the corner radius of thumbnails. Set to 0 to disable rounding."
+        settingKey: "cornerRadius"
+        defaultVal: 0
+        unit: "px"
     }
 
-    // -------------------------------------------------------------
-    // Border Width
-    // -------------------------------------------------------------
-    Column {
-        id: colBorder
-        width: parent.width; spacing: Theme.spacingXS
-        property int defaultValue: 3
-        property var val: root.loadValue("borderWidth", defaultValue)
-        Row {
-            width: parent.width; spacing: Theme.spacingS
-            StyledText { text: "Border Width"; font.weight: Font.Medium; color: Theme.surfaceText; width: parent.width - 24 - Theme.spacingS }
-            DankIcon {
-                name: "restart_alt"; size: 20
-                opacity: String(colBorder.val) !== String(colBorder.defaultValue) ? 0.8 : 0.0
-                visible: opacity > 0
-                Behavior on opacity { NumberAnimation { duration: 200 } }
-                MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.saveValue("borderWidth", colBorder.defaultValue) }
-            }
-        }
-        StyledText { text: "Width of the skewed border around thumbnails."; font.pixelSize: Theme.fontSizeSmall; color: Theme.surfaceVariantText; width: parent.width; wrapMode: Text.WordWrap; opacity: 0.8 }
-        DankSlider { width: parent.width; minimum: 0; maximum: 20; value: Number(colBorder.val) || colBorder.defaultValue; unit: "px"; onSliderValueChanged: v => root.saveValue("borderWidth", v) }
+    // -------------------------------------------------------------------------
+    // Layout Settings
+    // -------------------------------------------------------------------------
+    SettingSlider {
+        label: "Item Width"
+        desc: "Width of each wallpaper thumbnail in pixels."
+        settingKey: "itemWidth"
+        min: 100; max: 1000; defaultVal: 300; unit: "px"
     }
 
-    // -------------------------------------------------------------
-    // Selected Scale
-    // -------------------------------------------------------------
-    Column {
-        id: colScale
-        width: parent.width; spacing: Theme.spacingXS
-        property int defaultValue: 115
-        property var val: root.loadValue("selectedScale", defaultValue)
-        Row {
-            width: parent.width; spacing: Theme.spacingS
-            StyledText { text: "Selected Scale (%)"; font.weight: Font.Medium; color: Theme.surfaceText; width: parent.width - 24 - Theme.spacingS }
-            DankIcon {
-                name: "restart_alt"; size: 20
-                opacity: String(colScale.val) !== String(colScale.defaultValue) ? 0.8 : 0.0
-                visible: opacity > 0
-                Behavior on opacity { NumberAnimation { duration: 200 } }
-                MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.saveValue("selectedScale", colScale.defaultValue) }
-            }
-        }
-        StyledText { text: "Scale of the centered image (e.g. 115 for 1.15x)."; font.pixelSize: Theme.fontSizeSmall; color: Theme.surfaceVariantText; width: parent.width; wrapMode: Text.WordWrap; opacity: 0.8 }
-        DankSlider { width: parent.width; minimum: 100; maximum: 150; value: Number(colScale.val) || colScale.defaultValue; unit: "%"; onSliderValueChanged: v => root.saveValue("selectedScale", v) }
+    SettingSlider {
+        label: "Item Height"
+        desc: "Height of each wallpaper thumbnail in pixels."
+        settingKey: "itemHeight"
+        min: 100; max: 1440; defaultVal: 420; unit: "px"
     }
 
-    // -------------------------------------------------------------
-    // Background Dimming
-    // -------------------------------------------------------------
-    Column {
-        id: colDimming
-        width: parent.width; spacing: Theme.spacingXS
-        property int defaultValue: 80
-        property var val: root.loadValue("overlayOpacity", defaultValue)
-        Row {
-            width: parent.width; spacing: Theme.spacingS
-            StyledText { text: "Background Dimming (%)"; font.weight: Font.Medium; color: Theme.surfaceText; width: parent.width - 24 - Theme.spacingS }
-            DankIcon {
-                name: "restart_alt"; size: 20
-                opacity: String(colDimming.val) !== String(colDimming.defaultValue) ? 0.8 : 0.0
-                visible: opacity > 0
-                Behavior on opacity { NumberAnimation { duration: 200 } }
-                MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.saveValue("overlayOpacity", colDimming.defaultValue) }
-            }
-        }
-        StyledText { text: "Opacity of the dark overlay behind the carousel."; font.pixelSize: Theme.fontSizeSmall; color: Theme.surfaceVariantText; width: parent.width; wrapMode: Text.WordWrap; opacity: 0.8 }
-        DankSlider { width: parent.width; minimum: 0; maximum: 100; value: Number(colDimming.val) || colDimming.defaultValue; unit: "%"; onSliderValueChanged: v => root.saveValue("overlayOpacity", v) }
+    SettingSlider {
+        label: "Border Width"
+        desc: "Width of the skewed border around thumbnails."
+        settingKey: "borderWidth"
+        max: 20; defaultVal: 3; unit: "px"
     }
 
-    SelectionSetting {
-        settingKey: "enableRounding"
-        label: "Enable Rounded Corners"
-        description: "Apply rounded corners to image thumbnails."
-        defaultValue: "false"
-        options: [
-            { label: "Disabled", value: "false" },
-            { label: "Enabled", value: "true" }
-        ]
-    }
-
-    // -------------------------------------------------------------
-    // Corner Radius
-    // -------------------------------------------------------------
-    Column {
-        id: colRadius
-        width: parent.width; spacing: Theme.spacingXS
-        property int defaultValue: 10
-        property var val: root.loadValue("cornerRadius", defaultValue)
-        Row {
-            width: parent.width; spacing: Theme.spacingS
-            StyledText { text: "Corner Radius (px)"; font.weight: Font.Medium; color: Theme.surfaceText; width: parent.width - 24 - Theme.spacingS }
-            DankIcon {
-                name: "restart_alt"; size: 20
-                opacity: String(colRadius.val) !== String(colRadius.defaultValue) ? 0.8 : 0.0
-                visible: opacity > 0
-                Behavior on opacity { NumberAnimation { duration: 200 } }
-                MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.saveValue("cornerRadius", colRadius.defaultValue) }
-            }
-        }
-        StyledText { text: "Adjust the corner radius when enabled."; font.pixelSize: Theme.fontSizeSmall; color: Theme.surfaceVariantText; width: parent.width; wrapMode: Text.WordWrap; opacity: 0.8 }
-        DankSlider { width: parent.width; minimum: 0; maximum: 100; value: Number(colRadius.val) || colRadius.defaultValue; unit: "px"; onSliderValueChanged: v => root.saveValue("cornerRadius", v) }
-    }
-
+    // -------------------------------------------------------------------------
+    // Visual Effects
+    // -------------------------------------------------------------------------
     SelectionSetting {
         settingKey: "expandSelected"
         label: "Expand Selected Image"
@@ -187,84 +138,45 @@ PluginSettings {
         ]
     }
 
+    SettingSlider {
+        label: "Selected Scale"
+        desc: "Scale for the centered image."
+        settingKey: "selectedScale"
+        min: 100; max: 150; defaultVal: 108; unit: "%"
+    }
+
+    SettingSlider {
+        label: "Expansion Amount"
+        desc: "Width multiplier for the centered image."
+        settingKey: "expandMultiplier"
+        min: 100; max: 300; defaultVal: 120; unit: "%"
+    }
+
+    // -------------------------------------------------------------------------
+    // Interaction Settings
+    // -------------------------------------------------------------------------
     SelectionSetting {
         settingKey: "enableHoldExpand"
         label: "Enable Hold to Expand"
         description: "Stay on an image to trigger a larger immersive preview."
-        defaultValue: "true"
+        defaultValue: "false"
         options: [
             { label: "Disabled", value: "false" },
             { label: "Enabled", value: "true" }
         ]
     }
 
-    // -------------------------------------------------------------
-    // Expansion Amount
-    // -------------------------------------------------------------
-    Column {
-        id: colExpand
-        width: parent.width; spacing: Theme.spacingXS
-        property int defaultValue: 150
-        property var val: root.loadValue("expandMultiplier", defaultValue)
-        Row {
-            width: parent.width; spacing: Theme.spacingS
-            StyledText { text: "Expansion Amount (%)"; font.weight: Font.Medium; color: Theme.surfaceText; width: parent.width - 24 - Theme.spacingS }
-            DankIcon {
-                name: "restart_alt"; size: 20
-                opacity: String(colExpand.val) !== String(colExpand.defaultValue) ? 0.8 : 0.0
-                visible: opacity > 0
-                Behavior on opacity { NumberAnimation { duration: 200 } }
-                MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.saveValue("expandMultiplier", colExpand.defaultValue) }
-            }
-        }
-        StyledText { text: "Width multiplier for the centered image."; font.pixelSize: Theme.fontSizeSmall; color: Theme.surfaceVariantText; width: parent.width; wrapMode: Text.WordWrap; opacity: 0.8 }
-        DankSlider { width: parent.width; minimum: 100; maximum: 300; value: Number(colExpand.val) || colExpand.defaultValue; unit: "%"; onSliderValueChanged: v => root.saveValue("expandMultiplier", v) }
+    SettingSlider {
+        label: "Hold Screen Coverage"
+        desc: "Percentage of screen coverage for the hold preview."
+        settingKey: "holdExpandRatio"
+        min: 30; max: 100; defaultVal: 35; unit: "%"
     }
 
-    // -------------------------------------------------------------
-    // Hold Screen Coverage
-    // -------------------------------------------------------------
-    Column {
-        id: colCoverage
-        width: parent.width; spacing: Theme.spacingXS
-        property int defaultValue: 80
-        property var val: root.loadValue("holdExpandRatio", defaultValue)
-        Row {
-            width: parent.width; spacing: Theme.spacingS
-            StyledText { text: "Hold Screen Coverage (%)"; font.weight: Font.Medium; color: Theme.surfaceText; width: parent.width - 24 - Theme.spacingS }
-            DankIcon {
-                name: "restart_alt"; size: 20
-                opacity: String(colCoverage.val) !== String(colCoverage.defaultValue) ? 0.8 : 0.0
-                visible: opacity > 0
-                Behavior on opacity { NumberAnimation { duration: 200 } }
-                MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.saveValue("holdExpandRatio", colCoverage.defaultValue) }
-            }
-        }
-        StyledText { text: "Percentage of screen dimensions the image unfolds to."; font.pixelSize: Theme.fontSizeSmall; color: Theme.surfaceVariantText; width: parent.width; wrapMode: Text.WordWrap; opacity: 0.8 }
-        DankSlider { width: parent.width; minimum: 30; maximum: 100; value: Number(colCoverage.val) || colCoverage.defaultValue; unit: "%"; onSliderValueChanged: v => root.saveValue("holdExpandRatio", v) }
+    SettingSlider {
+        label: "Hold Delay"
+        desc: "Time to stay on an image before it expands."
+        settingKey: "holdDelay"
+        min: 200; max: 10000; defaultVal: 1500; unit: "ms"
     }
-
-    // -------------------------------------------------------------
-    // Hold Delay
-    // -------------------------------------------------------------
-    Column {
-        id: colDelay
-        width: parent.width; spacing: Theme.spacingXS
-        property int defaultValue: 5000
-        property var val: root.loadValue("holdDelay", defaultValue)
-        Row {
-            width: parent.width; spacing: Theme.spacingS
-            StyledText { text: "Hold Delay (ms)"; font.weight: Font.Medium; color: Theme.surfaceText; width: parent.width - 24 - Theme.spacingS }
-            DankIcon {
-                name: "restart_alt"; size: 20
-                opacity: String(colDelay.val) !== String(colDelay.defaultValue) ? 0.8 : 0.0
-                visible: opacity > 0
-                Behavior on opacity { NumberAnimation { duration: 200 } }
-                MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.saveValue("holdDelay", colDelay.defaultValue) }
-            }
-        }
-        StyledText { text: "Time to stay on an image before it expands."; font.pixelSize: Theme.fontSizeSmall; color: Theme.surfaceVariantText; width: parent.width; wrapMode: Text.WordWrap; opacity: 0.8 }
-        DankSlider { width: parent.width; minimum: 200; maximum: 10000; value: Number(colDelay.val) || colDelay.defaultValue; unit: "ms"; onSliderValueChanged: v => root.saveValue("holdDelay", v) }
-    }
-
 }

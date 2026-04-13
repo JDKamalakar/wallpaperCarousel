@@ -278,20 +278,20 @@ PluginComponent {
             readonly property int itemHeight: parseInt(pluginData && pluginData.itemHeight) || 420
             readonly property int borderWidth: (pluginData && pluginData.borderWidth !== undefined) ? parseInt(pluginData.borderWidth) : 3
             readonly property real selectedScale: {
-                let val = (pluginData && pluginData.selectedScale !== undefined) ? parseFloat(pluginData.selectedScale) : 115;
+                let val = (pluginData && pluginData.selectedScale !== undefined) ? parseFloat(pluginData.selectedScale) : 108;
                 return val > 10 ? val / 100.0 : val;
             }
             readonly property int overlayOpacity: (pluginData && pluginData.overlayOpacity !== undefined) ? parseInt(pluginData.overlayOpacity) : 80
             readonly property real skewFactor: -0.35
             readonly property int _baseWallpaperCount: folderModel.count
 
-            readonly property bool enableRounding: !!(pluginData && (pluginData.enableRounding === true || pluginData.enableRounding === "true"))
-            readonly property int cornerRadius: (pluginData && pluginData.cornerRadius !== undefined) ? parseInt(pluginData.cornerRadius) : 10
+            readonly property int cornerRadius: (pluginData && pluginData.cornerRadius !== undefined) ? parseInt(pluginData.cornerRadius) : 0
+            readonly property bool enableRounding: cornerRadius > 0
             readonly property bool expandSelected: !!(pluginData && (pluginData.expandSelected === true || pluginData.expandSelected === "true"))
-            readonly property real expandMultiplier: ((pluginData && pluginData.expandMultiplier !== undefined) ? parseInt(pluginData.expandMultiplier) : 150) / 100.0
-            readonly property bool enableHoldExpand: !!(pluginData && (pluginData.enableHoldExpand === undefined || pluginData.enableHoldExpand === true || pluginData.enableHoldExpand === "true" || pluginData.enableHoldExpand !== "false"))
-            readonly property real holdExpandRatio: ((pluginData && pluginData.holdExpandRatio !== undefined) ? parseFloat(pluginData.holdExpandRatio) : 80.0) / 100.0
-            readonly property int holdDelay: (pluginData && pluginData.holdDelay !== undefined) ? parseInt(pluginData.holdDelay) : 5000
+            readonly property real expandMultiplier: ((pluginData && pluginData.expandMultiplier !== undefined) ? parseInt(pluginData.expandMultiplier) : 120) / 100.0
+            readonly property bool enableHoldExpand: !!(pluginData && (pluginData.enableHoldExpand === true || pluginData.enableHoldExpand === "true"))
+            readonly property real holdExpandRatio: ((pluginData && pluginData.holdExpandRatio !== undefined) ? parseFloat(pluginData.holdExpandRatio) : 35.0) / 100.0
+            readonly property int holdDelay: (pluginData && pluginData.holdDelay !== undefined) ? parseInt(pluginData.holdDelay) : 1500
 
             property int heldIndex: -1
 
